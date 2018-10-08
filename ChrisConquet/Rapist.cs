@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,9 +7,14 @@ public class Rapist : MonoBehaviour {
 
     private float WalkUp = 0.8f;            //timer tijd wanneer voordat de rapist je achterna gaat
 
+DatBoiiiii334-patch-1
     private bool walk;
     private bool hi;
     private bool mybad;
+    private bool walk;
+    private bool hi;
+    private bool mybad;
+
 
     public GameObject helloText;
 	public GameObject sorryText;
@@ -51,6 +56,7 @@ public class Rapist : MonoBehaviour {
 
 
 		if (WalkUp < -4) {                           //Stops movement when timer is at 0 and starts it again when timer is at -4             
+
 			walk = true;
             helloText.SetActive(true);
         }
@@ -58,6 +64,14 @@ public class Rapist : MonoBehaviour {
             walk = false;
             helloText.SetActive(false);
         }
+			walk = true;
+            helloText.SetActive(true);
+        }
+        else if (WalkUp < 0) {
+            walk = false;
+            helloText.SetActive(false);
+        }
+
 
 			
 		if (walk) {
