@@ -11,26 +11,24 @@ public class PlayerController : MonoBehaviour {
 	private Rigidbody rb;
 	private AudioSource audioSource;
 
-	public float speed;
-	public float tilt;
-	public Boundary boundary;
+	public float speed { get; set; };
+	public float tilt { get; set; };
+	public Boundary boundary { get; set; };
 
-	public GameObject shot;
-	public Transform shotSpawn;
-	public float fireRate;
+	public GameObject shot { get; set; };
+	public Transform shotSpawn { get; set; };
+	public float fireRate { get; set; };
 
 	private float nextFire;
 
 
-	void Start ()
-	{
+	void Start ()	{
 		rb = GetComponent<Rigidbody> ();
 		audioSource = GetComponent<AudioSource> ();
 	}
 
 
-	void Update ()
-	{
+	void Update ()	{
 		if (Input.GetButton("Fire1") && Time.time > nextFire)
 		{
 			nextFire = Time.time + fireRate;
@@ -51,8 +49,7 @@ public class PlayerController : MonoBehaviour {
 	}
 
 
-	void FixedUpdate ()
-	{
+	void FixedUpdate ()	{
 		float moveHorizontal = Input.GetAxis ("Horizontal");
 		float moveVertical = Input.GetAxis ("Vertical");
 
