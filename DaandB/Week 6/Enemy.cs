@@ -13,9 +13,6 @@ public class Enemy : MonoBehaviour {
 
 	public float speed;
 
-	// Target GameObject (player)
-	// public retreatDistance (Perhaps a collider could make this unnecessary)
-
 	// SetSpeed sets the speed variable and assigns the object's rigidbody to the rigBod variable.
 	public void SetSpeed () {
 		rigBod = GetComponent<Rigidbody2D>();
