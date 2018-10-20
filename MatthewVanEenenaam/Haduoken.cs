@@ -5,20 +5,12 @@ using UnityEngine;
 public class Haduoken : MonoBehaviour {
 
     
-    private float speed = 7;
+    private float speed;
     private Animator anim;
     
-public Player player
-    {
-        get;
-        set;
-    }
+    public Player player { get; set; }
 
-    public bool towardsPlayer
-    {
-        get;
-        set;
-    }
+    public bool towardsPlayer { get; set; }
 
 
     private void Start() {
@@ -26,6 +18,7 @@ public Player player
         anim = GetComponent<Animator>();
         player = GameObject.FindGameObjectWithTag("PlayerScriptHolder").GetComponent<Player>();
         towardsPlayer = true;
+        speed = Random.Range(6, 10);
     }
 
 
@@ -42,19 +35,18 @@ public Player player
     }
 
 
-    public void OnTriggerEnter2D(Collider2D col){
+    public void OnTriggerEnter2D(Collider2D col) {
 
-        if (col.gameObject.tag == "Player"){
+        if (col.gameObject.tag == "Player") {
             player.LoseHP();
             Destroy(gameObject);
         }
 
-        if (col.gameObject.tag == "PlayerHit"){
+        if (col.gameObject.tag == "PlayerHit") {
             towardsPlayer = false;
         }
 
-        if (col.gameObject.tag == "Opponent" || col.gameObject.tag == "Stop")
-        {
+        if (col.gameObject.tag == "Opponent" || col.gameObject.tag == "Stop") {
             Destroy(gameObject);
         }
     }
