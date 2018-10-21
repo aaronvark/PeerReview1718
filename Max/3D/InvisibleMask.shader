@@ -5,5 +5,4 @@
 		Pass{
 		Blend Zero One // keep the image behind it
 	}
-	}
 }
