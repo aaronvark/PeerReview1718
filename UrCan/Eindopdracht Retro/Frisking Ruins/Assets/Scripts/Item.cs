@@ -16,11 +16,16 @@ public class Item : ScriptableObject {
 	public bool craftingItem = false;
 
 	public enum Use {
-		NULL, MELEE_SWING, MELEE_SHANK
+		NULL, MELEE_SWING, MELEE_SHANK, USE_HEALTH
 	}
 
 	[HideInInspector]
-	public float damage, speed, range, cooldown;
+	public float damage, speed, range, cooldown, knockback;
+	[HideInInspector]
+	public int heal;
+
+	[HideInInspector]
+	public string useSound, hitSound;
 
 	[HideInInspector]
 	public int ammo = 1;
@@ -50,12 +55,21 @@ public class Item_Editor : Editor {
 				item.speed = EditorGUILayout.Slider("Swinging Speed", item.speed, 0.1f, 10);
 				item.damage = EditorGUILayout.FloatField("Damage", item.damage);
 				item.cooldown = EditorGUILayout.Slider("Cooldown", item.cooldown, 0.1f, 2);
+				item.knockback = EditorGUILayout.Slider("Knockback", item.knockback, 1, 10);
+				item.useSound = EditorGUILayout.TextField("Use Sound", item.useSound);
+				item.hitSound = EditorGUILayout.TextField("Hit Sound", item.hitSound);
 				break;
 			case Item.Use.MELEE_SHANK:
 				item.range = EditorGUILayout.FloatField("Shank Range", item.range);
 				item.speed = EditorGUILayout.Slider("Shank Speed", item.speed, 0.1f, 10);
 				item.damage = EditorGUILayout.FloatField("Damage", item.damage);
 				item.cooldown = EditorGUILayout.Slider("Cooldown", item.cooldown, 0.1f, 2);
+				item.knockback = EditorGUILayout.Slider("Knockback", item.knockback, 1, 10);
+				item.useSound = EditorGUILayout.TextField("Use Sound", item.useSound);
+				item.hitSound = EditorGUILayout.TextField("Hit Sound", item.hitSound);
+				break;
+			case Item.Use.USE_HEALTH:
+				item.heal = EditorGUILayout.IntField("Heal Points", item.heal);
 				break;
 		}
 	}

@@ -40,28 +40,28 @@ public class ParticleSpawner : MonoBehaviour {
 		}
 	}
 
-	public GameObject Spawn(string tag, Vector3 pos, Quaternion rot, Vector3 scale) {
-		if(!poolDictionary.ContainsKey(tag)) return null;
-		GameObject spwn = poolDictionary[tag].Dequeue();
+	public static GameObject SPAWN(string tag, Vector3 pos, Quaternion rot, Vector3 scale) {
+		if(!Instance.poolDictionary.ContainsKey(tag)) return null;
+		GameObject spwn = Instance.poolDictionary[tag].Dequeue();
 		spwn.SetActive(true);
 		spwn.transform.position = pos;
 		spwn.transform.rotation = rot;
 		spwn.transform.localScale = scale;
-		poolDictionary[tag].Enqueue(spwn);
+		Instance.poolDictionary[tag].Enqueue(spwn);
 		return spwn;
 	}
 
-	public GameObject Spawn(Color color, Vector3 pos, Quaternion rot, Vector3 scale) {
-		GameObject obj = Spawn("Sand Particle", pos, rot, scale);
+	public static GameObject SPAWN(Color color, Vector3 pos, Quaternion rot, Vector3 scale) {
+		GameObject obj = SPAWN("Sand Particle", pos, rot, scale);
 		obj.GetComponent<MeshRenderer>().material.color = color;
 		return obj;
 	}
 
-	public GameObject Spawn(string tag, Vector3 pos, Quaternion rot, float scale) {
-		return Spawn(tag, pos, rot, new Vector3(scale, scale, scale));
+	public static GameObject SPAWN(string tag, Vector3 pos, Quaternion rot, float scale) {
+		return SPAWN(tag, pos, rot, new Vector3(scale, scale, scale));
 	}
 
-	public GameObject Spawn(Color color, Vector3 pos, Quaternion rot, float scale) {
-		return Spawn(color, pos, rot, new Vector3(scale, scale, scale));
+	public static GameObject SPAWN(Color color, Vector3 pos, Quaternion rot, float scale) {
+		return SPAWN(color, pos, rot, new Vector3(scale, scale, scale));
 	}
 }
