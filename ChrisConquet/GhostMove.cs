@@ -83,7 +83,7 @@ public class GhostMove : MonoBehaviour {
 
     void Patrol() {
 
-        if (waypoints.Length > 1.1)
+        if (waypoints.Length > 1.1) {
         {
             if (Vector3.Distance(waypoints[currentWP].transform.position, transform.position ) < accuracyWP)
             {
