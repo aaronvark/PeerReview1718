@@ -30,18 +30,24 @@ public class CraftingSlot : MonoBehaviour {
 		select.name = "Select";
 	}
 
-	void FixedUpdate() {
+	void Update() {
 		if(itemOBJ != null) {
 			if(itemOBJ.GetComponent<Image>() != null) itemOBJ.GetComponent<Image>().sprite = item.texture;
 			itemOBJ.name = item.name;
 			setItemText(item.itemName);
 		}
+	}
 
+	void FixedUpdate() {
 		//Hide on blankItem
 		itemText.SetActive(isRealItem() & selected);
 
 		//Selection
 		select.SetActive(selected);
+
+		//Scale Animation
+		float scaleFactor = Mathf.Lerp(transform.localScale.x, 1 * ((selected)? 1.1f : 1), Time.deltaTime * 6);
+		transform.localScale = new Vector3(scaleFactor, scaleFactor, scaleFactor);
 	}
 
 	public void Init(int id, Inventory inv) {
@@ -91,5 +97,6 @@ public class CraftingSlot : MonoBehaviour {
 
 	public void setSelect(bool i) {
 		selected = i;
+		SoundManager.PLAY_STATIONARY_SOUND("Hit");
 	}
 }

@@ -9,5 +9,5 @@ public interface IHealth {
 	}
 
 	void Die();
-	void Damage(float amount);
+	void Damage(Item item, Transform source);
 }

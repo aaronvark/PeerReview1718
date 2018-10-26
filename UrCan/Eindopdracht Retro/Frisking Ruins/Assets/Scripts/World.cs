@@ -5,7 +5,7 @@ using ProceduralToolkit.Examples;
 
 public class World : MonoBehaviour {
 	[SerializeField]
-	private GameObject prefabTile, prefabCube, sun, prefabSprout, vignette;
+	private GameObject prefabTile, prefabCube, sun, prefabSprout, vignette, player;
 	private float baseVignetteAlpha;
 
 	private MeshRenderer terrainRenderer;
@@ -47,6 +47,9 @@ public class World : MonoBehaviour {
 
 	private List<GameObject> cullingObjects = new List<GameObject>();
 
+	[Header("All Enemies")]
+	public GameObject[] entities;
+
 	public class Tile {
 		public static Tile Floor = new Tile(0, "Floor");
 		public static Tile Wall = new Tile(1, "Wall");
@@ -84,7 +87,7 @@ public class World : MonoBehaviour {
 		}
 	}
 
-    void Start() {
+    void Awake() {
 		map = new bool[width, height];
 
 		GenerateMap(map);
@@ -120,6 +123,17 @@ public class World : MonoBehaviour {
 		
 		vignette.SetActive(dungeonActive);
 		vignette.GetComponent<UnityEngine.UI.Image>().color = new Color(0, 0, 0, Mathf.Lerp(vignette.GetComponent<UnityEngine.UI.Image>().color.a, (vignette.activeSelf)? baseVignetteAlpha : 0, Time.deltaTime * fadeSpeed));
+	
+		//Entity Gen
+		if(Random.Range(0, 20) < 5 && Time.time % 2 == 0) {
+			Vector3 randPos = Camera.main.ViewportToWorldPoint(new Vector3((Random.Range(0, 2) == 0)?-0.3f:1.3f, (Random.Range(0, 2) == 0)?-0.3f:1.3f, 20));
+			SpawnEntity(randPos);
+		}
+	}
+
+	protected void SpawnEntity(Vector3 pos) {
+		GameObject ent = Instantiate(entities[Random.Range(0, entities.Length)], pos, Quaternion.Euler(30, 180, 0), transform);
+		ent.GetComponent<Retro.Entity>().target = player;
 	}
 
 	protected bool IsPlayerInDungeon() {
@@ -135,7 +149,7 @@ public class World : MonoBehaviour {
 		planes[3].distance += 16;
 		foreach(GameObject obj in cullingObjects) {
 			if(obj == null || obj.GetComponent<Collider>() == null) continue;
-			if(GeometryUtility.TestPlanesAABB(planes, obj.GetComponent<Collider>().bounds)) {
+			if(GeometryUtility.TestPlanesAABB(planes, obj.GetComponent<Collider>().bounds) && !player.GetComponent<Player>().InDungeon()) {
 				obj.SetActive(true);
 			}
 			else obj.SetActive(false);
@@ -165,11 +179,9 @@ public class World : MonoBehaviour {
 					newTerra.name = "Terrain " + val;
 				}
 
-		int startX = 0, startY = 0;
-
 		//Borders
-		for(int l = 0; l < 2; l++) for(int x = -(width*sizeNeeded); x < width*sizeNeeded; x++) GenCube(cacti, x, l*height, true);
-		for(int l = 0; l < 2; l++) for(int x = -(height*sizeNeeded); x < height*sizeNeeded; x++) GenCube(cacti, l*height, x, true);
+		for(int l = 0; l < 2; l++) for(int x = 0; x < width; x++) for(int m = 0; m < 5; m++) GenCube(cacti, x, l*height+(m*2-1), true);
+		for(int l = 0; l < 2; l++) for(int x = 0; x < height; x++) for(int m = 0; m < 5; m++) GenCube(cacti, l*width+(m*2-1), x, true);
 		int totalW = width*(sizeNeeded+1);
 		int totalH = height*(sizeNeeded+1);
 
@@ -177,7 +189,8 @@ public class World : MonoBehaviour {
 		cellmap = InitMap(cellmap, totalW, totalH);
 		for(int i = 0; i < steps; i++) cellmap = DoStep(cellmap);
 
-
+		//Cactus
+		int startX = 0, startY = 0;
 		for(int x = 0; x < totalW; x++)
 			for(int y = 0; y < totalH; y++)
 			{
@@ -189,7 +202,8 @@ public class World : MonoBehaviour {
 		transform.Find("Floor").transform.localScale *= scale;
 
 		//Dungeons
-		GenDungeon(width/2, height/2);
+		GenDungeon(0, 10, Dungeon.Type.GAME_OF_LIFE);
+		GenDungeon(-80, 10, Dungeon.Type.TETRIS);
 
 		//Sprout
 		GameObject sprouts = new GameObject("Sprouts");
@@ -251,7 +265,10 @@ public class World : MonoBehaviour {
 		Color finalCol = new Color(gray*1.3f, gray*1.45f, gray*1.1f);
 		cub.GetComponent<MeshRenderer>().material.color = finalCol;
 
-		if(immortal) Destroy(GetComponent<Retro.Entity>());
+		if(immortal) {
+			Destroy(cub.GetComponent<Retro.Entity>());
+			Destroy(cub.GetComponent<Rigidbody>());
+		}
 
 		cullingObjects.Add(cub);
 	}
@@ -267,7 +284,7 @@ public class World : MonoBehaviour {
 		cullingObjects.Add(sprout);
 	}
 
-	private void GenDungeon(int x, int y) {
+	private void GenDungeon(int x, int y, Dungeon.Type type) {
 		float W = dungeonSize.x, H = dungeonSize.y;
 		GameObject dungeon = new GameObject("Dungeon");
 		dungeon.transform.SetParent(transform);
@@ -275,6 +292,7 @@ public class World : MonoBehaviour {
 		//Dungeon Init
 		dungeon.AddComponent<Dungeon>();
 		dungeon.GetComponent<Dungeon>().Generate(prefabTile, new Vector2(W, H));
+		dungeon.tag = "Dungeon";
 		
 		//Assign Dungeon Triggers
 		BoxCollider coll = dungeon.AddComponent<BoxCollider>();
@@ -284,23 +302,38 @@ public class World : MonoBehaviour {
 		Rigidbody rb = dungeon.AddComponent<Rigidbody>();
 		rb.useGravity = false;
 		rb.isKinematic = true;
-		dungeon.GetComponent<Dungeon>().Init(prefabTileOfLife, dungeon.transform);
+		dungeon.GetComponent<Dungeon>().Init(this, prefabTileOfLife, dungeon.transform, type);
+		dungeon.transform.localPosition = new Vector3(x, 0, y);
 		dungeons.Add(dungeon);
+	}
+
+	public Vector2 getWorldSize() {
+		return new Vector2(width, height);
+	}
+
+	public List<GameObject> GetDungeons() {
+		return dungeons;
 	}
 
 	public class Dungeon : MonoBehaviour {
 		public GameObject[,] tiles;
 		private List<GameObject> doors = new List<GameObject>();  
 		private GameObject prefabTile;
+		private World world;
 		
-		public bool[,] alive, nextState;
+		public bool[,] alive, nextState, landed;
 		private int W, H;
 
-		public float dungeonWinTime = 16;
+		public float dungeonWinTime = 24;
 
 		private float gridDelay = 0, dungeonTimer = 0, spawnDelay = 0, gliderDelay = 0;
 		private float dungeonSpeed = 0.05f;
 		private bool active = false, cleared = false;
+
+		private Type type;
+		public enum Type {
+			GAME_OF_LIFE, TETRIS
+		}
 
 		public abstract class EntityOfLife {
 			public int[,] shape;
@@ -308,7 +341,8 @@ public class World : MonoBehaviour {
 			public string name;
 			public Vector2 size;
 
-			public static EntityOfLife[] ENTITIES = {new Glider(), new Blinker(), new Flower()};
+			public static EntityOfLife[] ENTITIES_OF_LIFE = {new Glider(), new Blinker(), new Flower()};
+			public static EntityOfLife[] ENTITIES_TETRIS = {new TetrisL(), new TetrisL2(), new TetrisL3(), new TetrisL4(), new Block(), new Blinker()};
 
 			public EntityOfLife(int[,] shape, string name, int rarity, Vector2 size) {
 				this.shape = shape;
@@ -325,22 +359,45 @@ public class World : MonoBehaviour {
 				}
 				return flip;
 			}
+
+			public class TetrisL : EntityOfLife {
+				public TetrisL() : base(new int[,]{{1, 1, 1}, {0, 0, 1}, {0, 0, 1}}, "L-Shape", 20, new Vector2(3, 3)) {}
+			}
+			public class TetrisL2 : EntityOfLife {
+				public TetrisL2() : base(new int[,]{{0, 0, 1}, {0, 0, 1}, {1, 1, 1}}, "L-Shape", 20, new Vector2(3, 3)) {}
+			}
+			public class TetrisL3 : EntityOfLife {
+				public TetrisL3() : base(new int[,]{{1, 0, 0}, {1, 0, 0}, {1, 1, 0}}, "L-Shape", 20, new Vector2(3, 3)) {}
+			}
+			public class TetrisL4 : EntityOfLife {
+				public TetrisL4() : base(new int[,]{{0, 1, 1}, {0, 0, 1}, {0, 0, 1}}, "L-Shape", 20, new Vector2(3, 3)) {}
+			}
+			public class Block : EntityOfLife {
+				public Block() : base(new int[,]{{1, 1}, {1, 1}}, "Block", 20, new Vector2(2, 2)) {}
+			}
+
+			public class Glider : EntityOfLife {
+				public Glider() : base(new int[,]{{0, 1, 0}, {0, 0, 1}, {1, 1, 1}}, "Glider", 20, new Vector2(3, 3)) {}
+			}
+			public class Blinker : EntityOfLife {
+				public Blinker() : base(new int[,]{{1, 1, 1}}, "Blinker", 50, new Vector2(3, 1)) {}
+			}
+			public class Flower : EntityOfLife {
+				public Flower() : base(new int[,]{{0, 0, 1, 0, 0},
+												{0, 1, 0, 1, 0},
+												{1, 0, 0, 0, 1},
+												{1, 0, 0, 0, 1},
+												{1, 0, 0, 0, 1},
+												{0, 1, 0, 1, 0},
+												{0, 0, 1, 0, 0}}, "Flower", 40, new Vector2(5, 7)) {}
+			}
+
 		}
 
-		public class Glider : EntityOfLife {
-			public Glider() : base(new int[,]{{0, 1, 0}, {0, 0, 1}, {1, 1, 1}}, "Glider", 20, new Vector2(3, 3)) {}
-		}
-		public class Blinker : EntityOfLife {
-			public Blinker() : base(new int[,]{{1, 1, 1}}, "Blinker", 50, new Vector2(3, 1)) {}
-		}
-		public class Flower : EntityOfLife {
-			public Flower() : base(new int[,]{{0, 0, 1, 0, 0},
-											  {0, 1, 0, 1, 0},
-											  {1, 0, 0, 0, 1},
-											  {1, 0, 0, 0, 1},
-											  {1, 0, 0, 0, 1},
-										      {0, 1, 0, 1, 0},
-											  {0, 0, 1, 0, 0}}, "Flower", 40, new Vector2(5, 7)) {}
+		public class TileOfLife : MonoBehaviour {
+			void OnCollisionEnter(Collision col) {
+				if(col.gameObject.tag == "Player") col.gameObject.GetComponent<Player>().Damage(10, 2, transform);
+			}
 		}
 
 		public void Generate(GameObject prefabTile, Vector2 size) {
@@ -354,7 +411,10 @@ public class World : MonoBehaviour {
 
 					Tile spawnedTile = Tile.Floor;
 					if(i == 0 || i == W-1 || j == 0 || j == H-1) spawnedTile = Tile.Wall;
-					if((i == 0 && j == H/2+1) || (i == 0 && j == H/2) || (i == 0 && j == H/2-1) || (i == 0 && j == H/2-2) || (i == 0 && j == H/2+2)) spawnedTile = Tile.Floor;
+					
+					//Entrances
+					for(int l = -3; l < 3; l++) for(int m = 0; m < W; m += W-1) if(i == m && j == H/2+l) spawnedTile = Tile.Floor;
+					for(int l = -3; l < 3; l++) for(int m = 0; m < H; m += H-1) if(i == W/2+l && j == m) spawnedTile = Tile.Floor;
 
 					InitTile(spawnedTile, tile);
 				}
@@ -366,10 +426,13 @@ public class World : MonoBehaviour {
 			tileInfo.assignSolidity(tile);
 		}
 
-		public void Init(GameObject prefab, Transform parent) {
+		public void Init(World world, GameObject prefab, Transform parent, Type type) {
+			this.world = world;
+			this.type = type;
 			Vector2 pos = new Vector2(parent.position.x, parent.position.z);
 			tiles = new GameObject[W, H];
 			alive = new bool[W, H];
+			landed = new bool[W, H];
 			nextState = new bool[W, H];
 			for(int i = 0; i < W; i++) 
 				for(int j = 0; j < H; j++){
@@ -377,6 +440,7 @@ public class World : MonoBehaviour {
 					nextState[i, j] = false;
 					tiles[i, j] = Instantiate(prefab);
 					tiles[i, j].name = "Tile of Life";
+					tiles[i, j].AddComponent<TileOfLife>();
 					tiles[i, j].transform.SetParent(parent);
 					tiles[i, j].transform.localPosition = new Vector3(i, 0, j);
 					setTileState(i, j, false);
@@ -388,13 +452,28 @@ public class World : MonoBehaviour {
 				for(int x = -1; x <= W; x++)
 					for(int y = -1; y <= H; y++) {
 						if(x > 0 && y > 0 && x < W-2 && y < H-2) continue;
-						GameObject door = Instantiate(prefabTile, new Vector3(x, 1, y), Quaternion.Euler(90,  transform.eulerAngles.y, transform.eulerAngles.z));
+						GameObject door = Instantiate(prefabTile, new Vector3(x + transform.position.x, 1, y + transform.position.z), Quaternion.Euler(90, transform.eulerAngles.y, transform.eulerAngles.z));
 						door.transform.SetParent(transform);
 						door.name = "Dungeon Door";
 						doors.Add(door);
 					}
+				SoundManager.PLAY_DUNGEON_THEME();
 			}			
-			enemyTick();
+			switch(type) {
+				case Type.GAME_OF_LIFE:
+					gameOfLifeTick();
+					break;
+				case Type.TETRIS:
+					tetrisTick();
+					break;
+			}
+
+			//Entities
+			if(Random.Range(0, 15) < 5 && Time.time % 2 == 0) {
+				Vector3 randPos = new Vector3(Random.Range(0, W), 2, Random.Range(0, H));
+				world.SpawnEntity(randPos);
+			}
+
 			active = true;
 		}
 		public void DeactivateDungeon() {
@@ -411,20 +490,45 @@ public class World : MonoBehaviour {
 			}
 		}
 
-		private void enemyTick() {
+		private void tetrisTick() {
+			if(cleared) return;
+			if(dungeonTimer < dungeonWinTime) {
+				//Tiles
+				if(Random.Range(0, 100) < 10) {
+					int x = Random.Range(0, W);
+					EntityOfLife life = EntityOfLife.ENTITIES_TETRIS[Random.Range(0, EntityOfLife.ENTITIES_TETRIS.Length)];
+					if(Random.Range(0, 100) > life.rarity) placeEntity(x, H - 3, life);
+				}
+			}
+
+			//Killing
+			if(dungeonTimer > dungeonWinTime) {
+				for(int i = 0; i < 20; i++) {
+					int randX = Random.Range(0, W);
+					int randY = Random.Range(0, H);
+					alive[randX, randY] = false;
+				}
+				if(dungeonTimer > dungeonWinTime + 5 && !cleared) {
+					cleared = true;
+					StartCoroutine(Clear());
+				}
+			}
+		}
+
+		private void gameOfLifeTick() {
 			if(cleared) return;
 			if(dungeonTimer < dungeonWinTime) {
 				//Corners
 				if(Random.Range(0, 100) < 5) {
 					for(int i = 0; i < 12; i++) {
-						EntityOfLife life = EntityOfLife.ENTITIES[Random.Range(0, EntityOfLife.ENTITIES.Length)];
+						EntityOfLife life = EntityOfLife.ENTITIES_OF_LIFE[Random.Range(0, EntityOfLife.ENTITIES_OF_LIFE.Length)];
 						if(Random.Range(0, 100) > life.rarity) placeEntity((W/2)*((i%2)+1) - (W/4), (H/2)*((i%2)+1) - (H/4), life);
 					}
 				}
 				//Center
 				if(spawnDelay <= 0) {
 					for(int i = 0; i < 3; i++) { 
-						EntityOfLife life = EntityOfLife.ENTITIES[Random.Range(0, EntityOfLife.ENTITIES.Length)];
+						EntityOfLife life = EntityOfLife.ENTITIES_OF_LIFE[Random.Range(0, EntityOfLife.ENTITIES_OF_LIFE.Length)];
 						 if(Random.Range(0, 100) > life.rarity) placeEntity((W/2)*((i%2)+1), H/2, life);
 						else 
 						{
@@ -436,7 +540,7 @@ public class World : MonoBehaviour {
 				}
 				//Gliders
 				if(Random.Range(0, 100) < 10 && (int)Time.time % 2 == 0 && gliderDelay <= 0){
-					 for(int i = 0; i < 2; i++) placeEntity((W/2)*((i%2)+1) - (W/4), (H/2)*((i%2)+1) - (H/4), EntityOfLife.ENTITIES[0], (i == 1));
+					 for(int i = 0; i < 2; i++) placeEntity((W/2)*((i%2)+1) - (W/4), (H/2)*((i%2)+1) - (H/4), EntityOfLife.ENTITIES_OF_LIFE[0], (i == 1));
 					gliderDelay = 1;
 				}
 			}
@@ -458,7 +562,6 @@ public class World : MonoBehaviour {
 		private void placeEntity(int x, int y, EntityOfLife ent) {
 			placeEntity(x, y, ent, false);
 		}
-
 		private void placeEntity(int x, int y, EntityOfLife ent, bool flip) {
 			int[,] entit = ent.shape;
 			if(flip) entit = ent.GetFlippedShape();
@@ -473,7 +576,9 @@ public class World : MonoBehaviour {
 			if(col.tag == "Player" && dungeonTimer > 0 && !cleared) {
 				dungeonTimer += Time.deltaTime;
 				if(dungeonTimer > 2) ActivateDungeon();
-				Camera.main.orthographicSize = Mathf.Lerp(Camera.main.orthographicSize, 30, Time.deltaTime * 4);
+				Camera.main.orthographicSize = Mathf.Lerp(Camera.main.orthographicSize, 25, Time.deltaTime * 4);
+				Camera.main.transform.rotation = Quaternion.Euler(Camera.main.transform.eulerAngles.x, Camera.main.transform.eulerAngles.y, Mathf.Sin(Time.time*4.5f));
+				col.GetComponent<Player>().setInDungeon(true);
 			}
 		}
 		void OnTriggerEnter(Collider col) {
@@ -490,11 +595,10 @@ public class World : MonoBehaviour {
 				Camera.main.fieldOfView = 115;
 				dungeonTimer = 0;
 				col.GetComponent<Player>().normalSpeed();
+				Camera.main.transform.rotation = Quaternion.Euler(Camera.main.transform.eulerAngles.x, Camera.main.transform.eulerAngles.y, 0);
+				col.GetComponent<Player>().setInDungeon(false);
+				SoundManager.STOP_DUNGEON_THEME();
 			}
-		}
-
-		public bool IsInDungeon() {
-			return active && !cleared;
 		}
 
 		void FixedUpdate() {
@@ -506,7 +610,7 @@ public class World : MonoBehaviour {
 			if(gliderDelay > 0) gliderDelay += Time.deltaTime;
 			if(gliderDelay > 1) gliderDelay = 0;
 
-			//Game of Life logic
+			//Game Logic
 			gridDelay += Time.deltaTime;
 			if(gridDelay > dungeonSpeed && dungeonTimer < dungeonWinTime + 4) {
 				gridDelay = 0;
@@ -519,7 +623,6 @@ public class World : MonoBehaviour {
 			for(int i = 0; i < W; i++) for(int j = 0; j < H; j++) obeysRules(i, j);
 			for(int i = 0; i < W; i++) for(int j = 0; j < H; j++) alive[i, j] = nextState[i, j];
 		}
-
 		private int countNeighbors(int x, int y) {
 			int n = 0;
 			for(int i = -1; i < 2; i++)
@@ -533,10 +636,31 @@ public class World : MonoBehaviour {
 		}
 
 		private void obeysRules(int i, int j) {
-			int neigh = countNeighbors(i, j);
-			if((neigh < 2 || neigh > 3)) nextState[i, j] = false;
-			if(!alive[i, j] && neigh == 3) nextState[i, j] = true;
-			if(alive[i, j] && (neigh == 2 || neigh == 3)) nextState[i, j] = true;
+			switch(type) {
+				case Type.GAME_OF_LIFE:
+					int neigh = countNeighbors(i, j);
+					if((neigh < 2 || neigh > 3)) nextState[i, j] = false;
+					if(!alive[i, j] && neigh == 3) nextState[i, j] = true;
+					if(alive[i, j] && (neigh == 2 || neigh == 3)) nextState[i, j] = true;
+					break;
+				case Type.TETRIS:
+					try {
+						if(alive[i, j]) {
+							if(!landed[i, j-1]) {
+								nextState[i, j-1] = true;
+								nextState[i, j] = false;
+							}
+							else {
+								landed[i, j] = true;
+								for(int m = -3; m < 2; m++)
+									for(int l = -3; l < 2; l++) if(alive[i+m, j+l]) landed[i+m, j+l] = true;
+							}
+							if(j-1 <= 0) landed[i, j] = true;
+						}
+					}
+					catch(System.IndexOutOfRangeException){}
+					break;
+			}
 		}
 
 		private void setTileState(int x, int y, bool activ) {
@@ -545,6 +669,14 @@ public class World : MonoBehaviour {
 				tiles[x, y].GetComponent<MeshRenderer>().enabled = activ;
 			}
 			catch(MissingReferenceException){}
+		}
+
+		public bool IsInDungeon() {
+			return active && !cleared;
+		}
+
+		public Vector2 GetSize() {
+			return new Vector2(W, H);
 		}
 	}
 }

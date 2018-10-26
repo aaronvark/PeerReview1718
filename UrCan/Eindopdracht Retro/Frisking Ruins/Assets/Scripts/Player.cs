@@ -22,7 +22,6 @@ public class Player : Retro.Entity {
 		cam = transform.Find("Camera").transform;
 		baseY = cam.localPosition.y;
 		baseFOV = cam.GetComponent<Camera>().fieldOfView;
-		texture = transform.Find("Sprite").GetComponent<SpriteRenderer>();
 
 		hold = texture.transform.Find("Holding").gameObject;
 		baseHoldingItemScale = hold.transform.GetChild(0).localScale;
@@ -31,7 +30,6 @@ public class Player : Retro.Entity {
 
 		//Base items
 		inventory.setItem(0, "SWORD");
-		//inventory.setItem(1, "CACTUS SHANK");
 	}
 
 	void Update () {
@@ -69,10 +67,34 @@ public class Player : Retro.Entity {
 		if(Input.GetButtonDown("Inventory [Right]")) inventory.nextSelection();
 		if(Input.GetButtonDown("Inventory [Left]")) inventory.prevSelection();
 		updateHoldingItem();
+		inventory.setHealth(Health);
 	}
 
-	void FixedUpdate() {
+	new void FixedUpdate() {
+		base.FixedUpdate();
+
 		if(currentItem != null && itemCooldown < currentItem.cooldown && !usingItem) itemCooldown += Time.deltaTime;
+
+		//Drop item
+		if(Input.GetButtonDown("Drop")) dropItem();
+
+		//Camera wiggle
+		if(!isInDungeon) {
+			float damagedWiggle = Mathf.Clamp(damagedTick, 1, 10);
+			Camera.main.transform.rotation = Quaternion.Euler(Camera.main.transform.eulerAngles.x, Camera.main.transform.eulerAngles.y, Mathf.Sin(Time.time*2*damagedWiggle)/2*damagedWiggle);
+		}
+		MusicTransition();
+	}
+
+	override public void Die() {
+		GetComponent<Rigidbody>().useGravity = true;
+		GetComponent<Rigidbody>().constraints = RigidbodyConstraints.FreezeRotationZ | RigidbodyConstraints.FreezeRotationX;
+		DeathSequence();
+		Destroy(this);
+	}
+	
+	private void DeathSequence() {
+		hold.transform.SetParent(null);
 	}
 
 	private void updateHoldingItem() {
@@ -94,15 +116,19 @@ public class Player : Retro.Entity {
 		//Item specific updates
 		if(usingItem) itemUpdate();
 		else itemIdle();
-
-		//Drop item
-		if(Input.GetButton("Drop")) dropItem();
 	}
 
 	public void dropItem() {
 		GameObject item = Instantiate(itemDropPrefab, transform.position, Quaternion.identity);
-		item.GetComponent<ItemDrop>().item = inventory.getSelectedItem();
-		inventory.removeSelection();
+		if(inventory.crafting.getSelectedSlot() == null) {
+			item.GetComponent<ItemDrop>().item = inventory.getSelectedItem();
+			inventory.removeSelection();
+			SoundManager.PLAY_STATIONARY_SOUND("Drop");
+		}
+		else {
+			item.GetComponent<ItemDrop>().item = inventory.crafting.getSelectedSlot().item;
+			inventory.crafting.removeSelection();
+		}
 	}
 
 	public void useItem() {
@@ -110,9 +136,13 @@ public class Player : Retro.Entity {
 		{
 			case Item.Use.NULL:
 				break;
+			case Item.Use.USE_HEALTH:
+				Heal(currentItem.heal);
+				break;
 			default:
 				itemTime = 0;
 				usingItem = true;
+				if(currentItem.useSound.Length > 0) SoundManager.PLAY_STATIONARY_SOUND(currentItem.useSound);
 				break;
 		}
 	}
@@ -160,5 +190,24 @@ public class Player : Retro.Entity {
 	public void pickupItem(Item item, int[] slot) {
 		if(slot[1] == 0) inventory.setItem(slot[0], item.ID);
 		else inventory.setCraftingItem(slot[0], item);
+
+		SoundManager.PLAY_STATIONARY_SOUND("Pick");
 	}
+
+	//Dungeon theme transition
+	private void MusicTransition() {
+		World world = World.instance;
+		float dist = 0;
+		for(int i = 0; i < world.GetDungeons().Count; i++) {
+			float curDist = Mathf.Abs(Vector3.Distance(transform.position, world.GetDungeons()[i].transform.position + new Vector3(world.GetDungeons()[i].GetComponent<World.Dungeon>().GetSize().x / 2, 0, world.GetDungeons()[i].GetComponent<World.Dungeon>().GetSize().y / 2)));
+			if(i == 0 || dist > curDist) dist = curDist;
+		}
+		dist = Mathf.Clamp(Map(dist, 0, 50, 2, 0), 0, 1);
+		SoundManager.FADE_MUSIC(dist);
+	}
+
+	private float Map(float value, float fromSource, float toSource, float fromTarget, float toTarget)
+    {
+        return (value - fromSource) / (toSource - fromSource) * (toTarget - fromTarget) + fromTarget;
+    }
 }
