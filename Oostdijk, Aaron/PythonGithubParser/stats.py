@@ -53,6 +53,7 @@ studentList = []
 # DATA STUFF # END
 ##############
 
+
 # add all collaborators as students
 for studentName in studentNames:
     addStudent(studentName, studentList)
@@ -70,7 +71,8 @@ print(len(j))
 # grab each individual request
 for i in j:
     # print("Parsing Pull Request: "+str(i["number"]))
-    prDate = dateutil.parser.parse(i["created_at"])
+    prCreateDate = dateutil.parser.parse(i["created_at"])
+    prClosedDate = dateutil.parser.parse(i["created_at"])
     isOpen = (i["state"] == "open")
     if not isOpen:
         print("checking closed date: "+i["closed_at"]+" - "+i["user"]["login"])
@@ -78,8 +80,11 @@ for i in j:
 
     print(i["state"])
 
-    # pr date is before start Date, or endDate is before prDate
-    if not isOpen or compare(prDate, sD) < 0:
+    # WHEN TO SKIP
+    # isOpen and createdDate is after endDate (was opened after timeframe)
+    # or
+    # not isOpen and closedDate is before startDate (already closed during timeframe)
+    if not isOpen and compare(prClosedDate, sD) < 0 or isOpen and compare(prCreateDate, eD) > 0:
         print("skipping pull request (not open in window): " + str(i["closed_at"]) + " - " + str(isOpen) + " - " + str(i["user"]["login"]))
         continue
 
@@ -167,7 +172,7 @@ for i in j:
                     prCommenter = getStudent(commenter, studentList)
                     prLiker = getStudent(liker, studentList)
                     prLiker.addGivenLike()
-                    prCommenter.addLikes(int(reaction["id"]))
+                    prCommenter.addLike(int(reaction["id"]))
         pass
 
 for s in studentList:

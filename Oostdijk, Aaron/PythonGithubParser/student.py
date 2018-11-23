@@ -3,7 +3,7 @@ class student:
     def __init__(self, name):
         self.name = name
         self.reviewed = []
-        self.likes = []
+        self.likes = {}
         self.prs = 0
         self.reviewCount = 0
         self.scoreValue = 0
@@ -26,11 +26,14 @@ class student:
         self.scoreValue += 1
 
     def addLike(self, id):
-        if self.likes[id] < 1:
-            self.scoreValue += 1
-        else:
-            self.scoreValue += 2
-        self.likes[id] += 1
+        try:
+            if self.likes[str(id)] < 1:
+                self.scoreValue += 1
+            else:
+                self.scoreValue += 2
+            self.likes[str(id)] += 1
+        except KeyError:
+            self.likes[str(id)] = 1
 
     def addReviewee(self, name):
         for n in self.reviewed:
@@ -56,7 +59,7 @@ def getStudent( name, studentList ):
     for s in studentList:
         if s.name == name:
             return s
-    return addStudent(name)
+    return addStudent(name, studentList)
 
 def addStudent( name, studentList):
     s = student( name )
