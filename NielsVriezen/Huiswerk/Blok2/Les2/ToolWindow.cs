@@ -56,7 +56,6 @@ public class LocalizeWindow : EditorWindow {
 		Rect popup = new Rect(new Vector2(0, 2*EditorGUIUtility.singleLineHeight), new Vector2(EditorWindow.GetWindow<LocalizeWindow>().position.width, EditorGUIUtility.singleLineHeight));
 
 		selectedLanguage = EditorGUI.Popup(popup, selectedLanguage, options.ToArray());
-
 		#endregion
 
 		#region OriginalText
