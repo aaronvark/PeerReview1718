@@ -12,10 +12,10 @@ public class Movement : MonoBehaviour {
 	private float z = 0;
 	private float x = 0;
 	private float xCam = 0;
-	private Vector3 EulerAngleVelocity;
+	private Vector3 eulerAngleVelocity;
 
 
-	void Update () {
+	private void Update () {
 
 		z = Input.GetAxis("Vertical") * speed;
 		x = Input.GetAxis("Horizontal") * speed;
@@ -24,8 +24,8 @@ public class Movement : MonoBehaviour {
 		GetComponent<Rigidbody>().AddForce(this.transform.forward * z);
 		GetComponent<Rigidbody>().AddForce(this.transform.right * x);
 
-		EulerAngleVelocity = new Vector3(0, xCam, 0);
-		Quaternion deltaRotation = Quaternion.Euler(EulerAngleVelocity);
+		eulerAngleVelocity = new Vector3(0, xCam, 0);
+		Quaternion deltaRotation = Quaternion.Euler(eulerAngleVelocity);
         GetComponent<Rigidbody>().MoveRotation(GetComponent<Rigidbody>().rotation * deltaRotation);
 	}
 }
